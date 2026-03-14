@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forma Claude Bridge</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #1a1a2e;
+        color: #e0e0e0;
+        padding: 16px;
+        font-size: 13px;
+      }
+
+      h1 {
+        font-size: 16px;
+        margin-bottom: 12px;
+        color: #00d4aa;
+      }
+
+      .status {
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        font-size: 12px;
+      }
+
+      .status.connected {
+        background: #0d3320;
+        border: 1px solid #00d4aa;
+        color: #00d4aa;
+      }
+
+      .status.disconnected {
+        background: #331111;
+        border: 1px solid #ff4444;
+        color: #ff4444;
+      }
+
+      .section {
+        background: #16213e;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .section h2 {
+        font-size: 13px;
+        color: #7ec8e3;
+        margin-bottom: 8px;
+      }
+
+      .btn {
+        background: #00d4aa;
+        color: #1a1a2e;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 4px 4px 4px 0;
+        transition: background 0.2s;
+      }
+
+      .btn:hover {
+        background: #00f5c4;
+      }
+
+      .btn:disabled {
+        background: #555;
+        cursor: not-allowed;
+      }
+
+      .output {
+        background: #0f0f23;
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        font-family: "Cascadia Code", "Fira Code", monospace;
+        font-size: 11px;
+        white-space: pre-wrap;
+        line-height: 1.5;
+      }
+
+      .log-entry {
+        padding: 2px 0;
+        border-bottom: 1px solid #1a1a2e;
+      }
+
+      .log-entry.info { color: #7ec8e3; }
+      .log-entry.success { color: #00d4aa; }
+      .log-entry.error { color: #ff4444; }
+      .log-entry.data { color: #e0e0e0; }
+
+      .query-input {
+        width: 100%;
+        padding: 8px 12px;
+        border-radius: 6px;
+        border: 1px solid #333;
+        background: #0f0f23;
+        color: #e0e0e0;
+        font-size: 12px;
+        margin-bottom: 8px;
+        font-family: inherit;
+      }
+
+      .query-input:focus {
+        outline: none;
+        border-color: #00d4aa;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .metric-card {
+        background: #0f0f23;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .metric-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #00d4aa;
+      }
+
+      .metric-label {
+        font-size: 10px;
+        color: #888;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🤖 Forma ↔ Claude Bridge</h1>
+
+    <div id="status" class="status disconnected">
+      ⏳ Connecting to Forma SDK...
+    </div>
+
+    <!-- Quick Data Section -->
+    <div class="section">
+      <h2>📊 Quick Data</h2>
+      <button class="btn" onclick="getBuildings()">Get Buildings</button>
+      <button class="btn" onclick="getSiteLimits()">Site Limits</button>
+      <button class="btn" onclick="getAreaMetrics()">Area Metrics</button>
+      <button class="btn" onclick="getTerrain()">Terrain</button>
+      <button class="btn" onclick="getSelection()">Get Selection</button>
+      <button class="btn" onclick="getAllElements()">All Elements</button>
+
+      <div class="metrics-grid" id="metricsGrid" style="display:none;">
+        <div class="metric-card">
+          <div class="metric-value" id="buildingCount">-</div>
+          <div class="metric-label">Buildings</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="siteArea">-</div>
+          <div class="metric-label">Site Area (m²)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="totalBTA">-</div>
+          <div class="metric-label">BTA (m²)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" id="livingUnits">-</div>
+          <div class="metric-label">Living Units</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analysis Section -->
+    <div class="section">
+      <h2>🔬 Analysis</h2>
+      <button class="btn" onclick="runSunAnalysis()">☀️ Sun Analysis</button>
+      <button class="btn" onclick="runWindAnalysis()">💨 Wind Analysis</button>
+    </div>
+
+    <!-- Custom Query Section -->
+    <div class="section">
+      <h2>💬 Custom Query (for Claude bridge)</h2>
+      <input
+        type="text"
+        class="query-input"
+        id="queryInput"
+        placeholder="e.g., get_buildings, get_element root, get_categories..."
+        onkeypress="if(event.key==='Enter') executeQuery()"
+      />
+      <button class="btn" onclick="executeQuery()">Execute</button>
+    </div>
+
+    <!-- Output Log -->
+    <div class="section">
+      <h2>📋 Output Log</h2>
+      <div class="output" id="output"></div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
